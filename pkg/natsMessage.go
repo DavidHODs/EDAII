@@ -29,28 +29,29 @@ type ConnectionManager struct {
 	NatsLog *os.File
 }
 
-// type Subscriber interface {
-// 	ProcessMessage(message string) []byte
-// }
-
-type SubscriberOne struct{}
-
-func (sub SubscriberOne) ProcessMessage(message string) []byte {
-	return []byte(strings.ToUpper(message))
+type Subscriber interface {
+	ProcessMessage() []byte
 }
 
-// ListenerTwo is a subscriber that reverses the message.
-type SubscriberTwo struct{}
+// SubscriberOne is a subsciber that converts received message into uppercase
+type SubscriberOne EventResponse
 
-func (l SubscriberTwo) ProcessMessage(message string) []byte {
-	return []byte(utils.ReverseString(message))
+func (sub SubscriberOne) ProcessMessage() []byte {
+	return []byte(strings.ToUpper(sub.SubscriberResult))
+}
+
+// SubscriberTwo is a subscriber that reverses the message.
+type SubscriberTwo EventResponse
+
+func (sub SubscriberTwo) ProcessMessage() []byte {
+	return []byte(utils.ReverseString(sub.SubscriberResult))
 }
 
 // SubscriberThree is a subscriber that converts the message to lowercase.
-type SubscriberThree struct{}
+type SubscriberThree EventResponse
 
-func (l SubscriberThree) ProcessMessage(message string) []byte {
-	return []byte(strings.ToLower(message))
+func (sub SubscriberThree) ProcessMessage() []byte {
+	return []byte(strings.ToLower(sub.SubscriberResult))
 }
 
 // EventRequest represents json request body over http
@@ -154,9 +155,6 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 	wg.Add(3)
 
 	var eventResp Resp
-	subscriber1 := SubscriberOne{}
-	subscriber2 := SubscriberTwo{}
-	subscriber3 := SubscriberThree{}
 
 	// creates the first listener that receives a payload from the nats cli
 	sub1, err := cm.NC.Subscribe(listenerOneSubject, func(msg *nats.Msg) {
@@ -168,8 +166,12 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 			Str("listener", "listener one").
 			Msgf("listener 1 received %s", listenerOneData)
 
+		subscriber1 := SubscriberOne{
+			SubscriberName:   "listener one",
+			SubscriberResult: listenerOneData,
+		}
 		// converts received data to all caps
-		capitalizedData := subscriber1.ProcessMessage(listenerOneData)
+		capitalizedData := subscriber1.ProcessMessage()
 
 		eventResp.addEventResponse("listener one", *listenerOne)
 
@@ -205,8 +207,12 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 			Str("listener", "listener two").
 			Msgf("listener 2 received %s from listener 1", listenerTwoData)
 
+		subscriber2 := SubscriberTwo{
+			SubscriberName:   "listener two",
+			SubscriberResult: listenerTwoData,
+		}
 		// reverses received data
-		reversedData := subscriber2.ProcessMessage(listenerTwoData)
+		reversedData := subscriber2.ProcessMessage()
 
 		eventResp.addEventResponse("listener two", *listenerTwo)
 
@@ -235,9 +241,14 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 			Str("listener", "listener three").
 			Msgf("listener 3 received %s from listener 2", listenerThreeData)
 
+		subscriber3 := SubscriberThree{
+			SubscriberName:   "listener three",
+			SubscriberResult: listenerThreeData,
+		}
+
 		// converts received data to lower form
 		lowerDataStr := strings.ToLower(listenerThreeData)
-		lowerData := subscriber3.ProcessMessage(listenerThreeData)
+		lowerData := subscriber3.ProcessMessage()
 
 		logger.Info().
 			Str("listener", "listener three").
