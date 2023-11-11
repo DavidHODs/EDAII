@@ -29,6 +29,30 @@ type ConnectionManager struct {
 	NatsLog *os.File
 }
 
+// type Subscriber interface {
+// 	ProcessMessage(message string) []byte
+// }
+
+type SubscriberOne struct{}
+
+func (sub SubscriberOne) ProcessMessage(message string) []byte {
+	return []byte(strings.ToUpper(message))
+}
+
+// ListenerTwo is a subscriber that reverses the message.
+type SubscriberTwo struct{}
+
+func (l SubscriberTwo) ProcessMessage(message string) []byte {
+	return []byte(utils.ReverseString(message))
+}
+
+// SubscriberThree is a subscriber that converts the message to lowercase.
+type SubscriberThree struct{}
+
+func (l SubscriberThree) ProcessMessage(message string) []byte {
+	return []byte(strings.ToLower(message))
+}
+
 // EventRequest represents json request body over http
 type EventRequest struct {
 	EventName string `json:"eventName"`
@@ -130,6 +154,9 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 	wg.Add(3)
 
 	var eventResp Resp
+	subscriber1 := SubscriberOne{}
+	subscriber2 := SubscriberTwo{}
+	subscriber3 := SubscriberThree{}
 
 	// creates the first listener that receives a payload from the nats cli
 	sub1, err := cm.NC.Subscribe(listenerOneSubject, func(msg *nats.Msg) {
@@ -142,7 +169,7 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 			Msgf("listener 1 received %s", listenerOneData)
 
 		// converts received data to all caps
-		capitalizedData := []byte(strings.ToUpper(listenerOneData))
+		capitalizedData := subscriber1.ProcessMessage(listenerOneData)
 
 		eventResp.addEventResponse("listener one", *listenerOne)
 
@@ -179,7 +206,7 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 			Msgf("listener 2 received %s from listener 1", listenerTwoData)
 
 		// reverses received data
-		reversedData := []byte(utils.ReverseString(listenerTwoData))
+		reversedData := subscriber2.ProcessMessage(listenerTwoData)
 
 		eventResp.addEventResponse("listener two", *listenerTwo)
 
@@ -210,7 +237,7 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 
 		// converts received data to lower form
 		lowerDataStr := strings.ToLower(listenerThreeData)
-		lowerData := []byte(strings.ToLower(listenerThreeData))
+		lowerData := subscriber3.ProcessMessage(listenerThreeData)
 
 		logger.Info().
 			Str("listener", "listener three").
