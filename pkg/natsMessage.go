@@ -32,11 +32,16 @@ type EventRequest struct {
 	EventName string `json:"eventName"`
 }
 
-type EventResponse struct {
-	Listener1 string    `json:"listener1" db:"listener_one"`
-	Listener2 string    `json:"listener2" db:"listener_two"`
-	Listener3 string    `json:"listener3" db:"listener_three"`
-	EventTime time.Time `json:"eventTime" db:"event_time"`
+// type EventResponse struct {
+// 	Listener1 string    `json:"listener1" db:"listener_one"`
+// 	Listener2 string    `json:"listener2" db:"listener_two"`
+// 	Listener3 string    `json:"listener3" db:"listener_three"`
+// 	EventTime time.Time `json:"eventTime" db:"event_time"`
+// }
+
+type EventResponseArray struct {
+	SubscriberName   string `json:"subscriberName"`
+	SubscriberResult string `json:"subscriberResult"`
 }
 
 // NatServerConn establishes a connection with nats server
@@ -237,11 +242,19 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 	// blocks this part of the code until all subscribers have gotten their data, guards against runtime panic: nil dereference error
 	wg.Wait()
 
-	eventResp := EventResponse{
-		Listener1: *listenerOne,
-		Listener2: *listenerTwo,
-		Listener3: *listenerThree,
-		EventTime: time.Now(),
+	var eventResp = []EventResponseArray{
+		{
+			SubscriberName:   "Listener One",
+			SubscriberResult: *listenerOne,
+		},
+		{
+			SubscriberName:   "Listener Two",
+			SubscriberResult: *listenerTwo,
+		},
+		{
+			SubscriberName:   "Listener Three",
+			SubscriberResult: *listenerThree,
+		},
 	}
 
 	stmt, err := cm.DB.Prepare("INSERT INTO events (listener_one, listener_two, listener_three, event_time) VALUES ($1, $2, $3, $4)")
@@ -253,7 +266,7 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 	}
 	defer stmt.Close()
 
-	_, err = stmt.Exec(eventResp.Listener1, eventResp.Listener2, eventResp.Listener3, eventResp.EventTime)
+	_, err = stmt.Exec(eventResp[0].SubscriberResult, eventResp[1].SubscriberResult, eventResp[2].SubscriberResult, time.Now())
 	if err != nil {
 		logger.Error().
 			Str("db", "stmt execution").
