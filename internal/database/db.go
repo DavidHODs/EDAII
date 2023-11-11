@@ -19,16 +19,16 @@ func InitDB(log *os.File) *sql.DB {
 	// sets up a logger with the specified log file as the log output destination
 	logger := zerolog.New(log).With().Timestamp().Caller().Logger()
 
-	envValues, err := utils.LoadEnv("DB_USERNAME", "DB_PASSWORD", "HOST", "DATABASE")
+	envValues, err := utils.LoadEnv("DB_USERNAME", "DB_PASSWORD", "HOST", "DATABASE", "SSL_MODE")
 	if err != nil {
 		logger.Fatal().
 			Str("error", "utility error").
 			Msg("could not load env file")
 
 	}
-	dbUsername, dbPassword, host, database := envValues[0], envValues[1], envValues[2], envValues[3]
+	dbUsername, dbPassword, host, database, ssl := envValues[0], envValues[1], envValues[2], envValues[3], envValues[4]
 
-	connStr := fmt.Sprintf("postgresql://%s:%s@%s/%s", dbUsername, dbPassword, host, database)
+	connStr := fmt.Sprintf("postgresql://%s:%s@%s/%s?%s", dbUsername, dbPassword, host, database, ssl)
 
 	db, err := sql.Open("postgres", connStr)
 	if err != nil {

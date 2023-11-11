@@ -10,3 +10,9 @@
 {"level":"info","listener":"listener three","time":"121212-1111-1112T00:118:12+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:255","message":"listener 3 modified NIAGA DNA NIAGA POO received from listener 2 into niaga dna niaga poo"}
 {"level":"info","response":"struct of data received + modifications","time":"121212-1111-1112T00:118:12+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:319","message":"[{listener one oop again and again} {listener two OOP AGAIN AND AGAIN} {listener three niaga dna niaga poo}]"}
 {"level":"info","time":"121212-1111-1112T00:118:12+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:285","message":"all pubsub processes done"}
+{"level":"info","listener":"listener one","time":"121212-1111-1112T00:1212:3311+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:167","message":"listener 1 received final test"}
+{"level":"info","listener":"listener two","time":"121212-1111-1112T00:1212:3311+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:208","message":"listener 2 received FINAL TEST from listener 1"}
+{"level":"info","listener":"listener three","time":"121212-1111-1112T00:1212:3311+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:242","message":"listener 3 received TSET LANIF from listener 2"}
+{"level":"info","listener":"listener three","time":"121212-1111-1112T00:1212:3311+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:255","message":"listener 3 modified TSET LANIF received from listener 2 into tset lanif"}
+{"level":"info","response":"struct of data received + modifications","time":"121212-1111-1112T00:1212:3311+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:319","message":"[{listener one final test} {listener two FINAL TEST} {listener three tset lanif}]"}
+{"level":"info","time":"121212-1111-1112T00:1212:3311+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:285","message":"all pubsub processes done"}
