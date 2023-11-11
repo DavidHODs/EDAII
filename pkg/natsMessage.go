@@ -22,26 +22,35 @@ const (
 	listenerThreeSubject = "events.chain.listener3"
 )
 
+// ConnectionManager holds neccessary connection links to nats, database and file services
 type ConnectionManager struct {
 	NC      *nats.Conn
 	DB      *sql.DB
 	NatsLog *os.File
 }
 
+// EventRequest represents json request body over http
 type EventRequest struct {
 	EventName string `json:"eventName"`
 }
 
-// type EventResponse struct {
-// 	Listener1 string    `json:"listener1" db:"listener_one"`
-// 	Listener2 string    `json:"listener2" db:"listener_two"`
-// 	Listener3 string    `json:"listener3" db:"listener_three"`
-// 	EventTime time.Time `json:"eventTime" db:"event_time"`
-// }
-
-type EventResponseArray struct {
+// EventResponse is a struct holding info about listeners and their outputs
+type EventResponse struct {
 	SubscriberName   string `json:"subscriberName"`
 	SubscriberResult string `json:"subscriberResult"`
+}
+
+// slice of EventResponse
+type Resp []EventResponse
+
+// addEventResponse is a method defined on a slice of EventResponse; adds a listener and its output to the response struct
+func (eventResp *Resp) addEventResponse(subscriberName, subscriberResult string) {
+	newResponse := EventResponse{
+		SubscriberName:   subscriberName,
+		SubscriberResult: subscriberResult,
+	}
+
+	*eventResp = append(*eventResp, newResponse)
 }
 
 // NatServerConn establishes a connection with nats server
@@ -120,6 +129,8 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 	var wg sync.WaitGroup
 	wg.Add(3)
 
+	var eventResp Resp
+
 	// creates the first listener that receives a payload from the nats cli
 	sub1, err := cm.NC.Subscribe(listenerOneSubject, func(msg *nats.Msg) {
 		defer wg.Done()
@@ -132,6 +143,8 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 
 		// converts received data to all caps
 		capitalizedData := []byte(strings.ToUpper(listenerOneData))
+
+		eventResp.addEventResponse("listener one", *listenerOne)
 
 		// publishes modified data for second listener to pick up
 		err = forwardMessage(cm.NC, listenerTwoSubject, "listener1", capitalizedData)
@@ -168,6 +181,8 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 		// reverses received data
 		reversedData := []byte(utils.ReverseString(listenerTwoData))
 
+		eventResp.addEventResponse("listener two", *listenerTwo)
+
 		// publishes modified data for third listener to pick up
 		err = forwardMessage(cm.NC, listenerThreeSubject, "listener2", reversedData)
 		if err != nil {
@@ -201,6 +216,8 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 			Str("listener", "listener three").
 			Msgf("listener 3 modified %s received from listener 2 into %s", listenerThreeData, lowerData)
 		listenerThree = &lowerDataStr
+
+		eventResp.addEventResponse("listener three", *listenerThree)
 
 		// *** the following lines are commented out - it triggers a negative waitgroup error plus it creates an infinite loop of multiple subscribers and publishers actions ***
 
@@ -241,21 +258,6 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 
 	// blocks this part of the code until all subscribers have gotten their data, guards against runtime panic: nil dereference error
 	wg.Wait()
-
-	var eventResp = []EventResponseArray{
-		{
-			SubscriberName:   "Listener One",
-			SubscriberResult: *listenerOne,
-		},
-		{
-			SubscriberName:   "Listener Two",
-			SubscriberResult: *listenerTwo,
-		},
-		{
-			SubscriberName:   "Listener Three",
-			SubscriberResult: *listenerThree,
-		},
-	}
 
 	stmt, err := cm.DB.Prepare("INSERT INTO events (listener_one, listener_two, listener_three, event_time) VALUES ($1, $2, $3, $4)")
 	if err != nil {
