@@ -26,14 +26,20 @@ services:
     image: postgres:latest
     restart: on-failure
     environment:
-      - POSTGRES_USER= postgres
-      - POSTGRES_PASSWORD= postgres
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+      - POSTGRES_DB=eda
     ports:
       - "5433:5432"
     networks:
       - eda_network
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 1s
+      timeout: 5s
+      retries: 10
     volumes:
-      - /build:/docker-entrypoint-initdb.d/init.sql
+      - ./build/init.sql:/docker-entrypoint-initdb.d/init.sql
 
   eda_nats:
     container_name: eda_nats_container

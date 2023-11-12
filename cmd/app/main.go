@@ -10,8 +10,8 @@ import (
 )
 
 const (
-	natsLog = "../../internal/logs/nats.log"
-	dbLog   = "../../internal/logs/db.log"
+	natsLog = "internal/logs/nats.log"
+	dbLog   = "internal/logs/db.log"
 )
 
 func main() {

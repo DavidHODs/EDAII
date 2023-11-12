@@ -1,12 +1,9 @@
 -- Create a role 'eda_user' with a password 'eda_password' if it doesn't exist
 DO $$ BEGIN
-  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'eda_user') THEN
-    CREATE ROLE eda_user WITH LOGIN PASSWORD 'eda_password';
+  IF NOT EXISTS (SELECT FROM pg_roles WHERE rolname = 'postgres') THEN
+    CREATE ROLE postgres WITH LOGIN PASSWORD 'postgres';
   END IF;
 END $$;
-
--- - Drop table events
--- DROP TABLE IF EXISTS events;
 
 -- Create a table named events
 CREATE TABLE IF NOT EXISTS events (
