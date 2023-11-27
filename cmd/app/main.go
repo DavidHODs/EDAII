@@ -17,14 +17,14 @@ const (
 
 func main() {
 	// initializes nats log file connection
-	natsLogF, err := utils.Logger(natsLog, false)
+	natsLogF, err := utils.Logger(natsLog)
 	if err != nil {
 		log.Fatalf("error: could not create nats ops log file: %s", err)
 	}
 	defer natsLogF.Close()
 
 	// initializes db log file connection
-	dbLogF, err := utils.Logger(dbLog, false)
+	dbLogF, err := utils.Logger(dbLog)
 	if err != nil {
 		log.Fatalf("error: could not create db log file: %s", err)
 	}
@@ -35,6 +35,15 @@ func main() {
 
 	// initializes database connection
 	db := db.InitDB(dbLogF)
+
+	isInterruptLogEmpty, err := utils.IsFileEmpty(interruptsLog)
+	if err != nil {
+		log.Fatalf("could not determine if interrupt log file is empty: %v", err)
+	}
+
+	if !isInterruptLogEmpty {
+
+	}
 
 	// loads ConnectionManager struct with required services and file connections
 	cm := &pkg.ConnectionManager{
