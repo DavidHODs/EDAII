@@ -10,20 +10,21 @@ import (
 )
 
 const (
-	natsLog = "internal/logs/nats.log"
-	dbLog   = "internal/logs/db.log"
+	natsLog       = "internal/logs/nats.log"
+	dbLog         = "internal/logs/db.log"
+	interruptsLog = "internal/logs/interrupts.log"
 )
 
 func main() {
 	// initializes nats log file connection
-	natsLogF, err := utils.Logger(natsLog)
+	natsLogF, err := utils.Logger(natsLog, false)
 	if err != nil {
 		log.Fatalf("error: could not create nats ops log file: %s", err)
 	}
 	defer natsLogF.Close()
 
 	// initializes db log file connection
-	dbLogF, err := utils.Logger(dbLog)
+	dbLogF, err := utils.Logger(dbLog, false)
 	if err != nil {
 		log.Fatalf("error: could not create db log file: %s", err)
 	}
