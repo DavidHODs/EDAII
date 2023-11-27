@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"log"
 
 	db "github.com/DavidHODs/EDAII/internal/database"
@@ -30,6 +31,13 @@ func main() {
 	}
 	defer dbLogF.Close()
 
+	// initializes interrupt log file connection
+	interruptLogLogF, err := utils.Logger(interruptsLog)
+	if err != nil {
+		log.Fatalf("error: could not create db log file: %s", err)
+	}
+	defer interruptLogLogF.Close()
+
 	// initializes nats server connection
 	nc := pkg.NatServerConn(natsLogF)
 
@@ -41,15 +49,17 @@ func main() {
 		log.Fatalf("could not determine if interrupt log file is empty: %v", err)
 	}
 
-	if !isInterruptLogEmpty {
-
-	}
-
 	// loads ConnectionManager struct with required services and file connections
 	cm := &pkg.ConnectionManager{
-		NC:      nc,
-		DB:      db,
-		NatsLog: natsLogF,
+		NC:           nc,
+		DB:           db,
+		NatsLog:      natsLogF,
+		InterruptLog: interruptLogLogF,
+	}
+
+	if !isInterruptLogEmpty {
+		fmt.Println("file not empty")
+		cm.NatsRecovery("trial")
 	}
 
 	app := fiber.New()

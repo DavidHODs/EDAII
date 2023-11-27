@@ -13,7 +13,8 @@ type EventRequest struct {
 
 // LoadEnv accepts a variable number of keys and returns the corresponding value from the env file
 func LoadEnv(keys ...string) ([]string, error) {
-	err := godotenv.Load("../../cmd/app/.env")
+	// err := godotenv.Load("../../cmd/app/.env")
+	err := godotenv.Load("cmd/app/.env")
 	if err != nil {
 		return nil, err
 	}

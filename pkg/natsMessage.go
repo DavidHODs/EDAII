@@ -4,9 +4,11 @@ import (
 	"database/sql"
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
 	"strings"
 	"sync"
+	"syscall"
 	"time"
 
 	utils "github.com/DavidHODs/EDAII/internal/utils"
@@ -24,9 +26,10 @@ const (
 
 // ConnectionManager holds neccessary connection links to nats, database and file services
 type ConnectionManager struct {
-	NC      *nats.Conn
-	DB      *sql.DB
-	NatsLog *os.File
+	NC           *nats.Conn
+	DB           *sql.DB
+	NatsLog      *os.File
+	InterruptLog *os.File
 }
 
 type Subscriber interface {
@@ -121,11 +124,33 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 	// logger uses Go time layout for time stamping
 	zerolog.TimeFieldFormat = zerolog.TimestampFunc().Format("2006-01-02T15:04:05Z07:00")
 
-	// sets up a logger with the specified log file as the log output destination
+	// sets up loggers with the specified log file as the log output destination
 	logger := zerolog.New(cm.NatsLog).With().Timestamp().Caller().Logger()
+	interruptLogger := zerolog.New(cm.InterruptLog).With().Timestamp().Caller().Logger()
 
 	// creates listener variables to store information
 	var listenerOne, listenerTwo, listenerThree *string
+
+	// Create a channel to receive signals
+	sigCh := make(chan os.Signal, 1)
+	// Notify the sigCh channel on SIGINT and SIGTERM signals
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		// Blocks the code until a signal is received
+		sigReceived := <-sigCh
+
+		fmt.Printf("Received signal: %v\n", sigReceived)
+		logger.Error().
+			Str("signal channel", "interrupt recieved").
+			Msgf("signal channel received signal: %s", sigReceived)
+
+		interruptLogger.Info().
+			Msgf("%s", *listenerOne)
+
+		// exits the program
+		os.Exit(1)
+	}()
 
 	// unmarshalls request body into eventReq
 	var eventReq EventRequest
@@ -215,6 +240,8 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 		reversedData := subscriber2.ProcessMessage()
 
 		eventResp.addEventResponse("listener two", *listenerTwo)
+
+		time.Sleep(10 * time.Second)
 
 		// publishes modified data for third listener to pick up
 		err = forwardMessage(cm.NC, listenerThreeSubject, "listener2", reversedData)
@@ -322,4 +349,210 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 	close(done)
 
 	return c.Status(fiber.StatusOK).JSON(fiber.Map{"event response": eventResp})
+}
+
+// NatsRecovery completes interrupted nats process on system startup. it's mostly a duplicate code of NatsOps() aprt from the source of event message. would have NatsOps a variadic function and check if an extra parameter is passes before trying the recovery process but fiber does not accept a variadic pattern in its HTTP functions.
+func (cm *ConnectionManager) NatsRecovery(eventMessage string) {
+	// logger uses Go time layout for time stamping
+	zerolog.TimeFieldFormat = zerolog.TimestampFunc().Format("2006-01-02T15:04:05Z07:00")
+
+	// sets up loggers with the specified log file as the log output destination
+	logger := zerolog.New(cm.NatsLog).With().Timestamp().Caller().Logger()
+	interruptLogger := zerolog.New(cm.InterruptLog).With().Timestamp().Caller().Logger()
+
+	// creates listener variables to store information
+	var listenerOne, listenerTwo, listenerThree *string
+
+	// Create a channel to receive signals
+	sigCh := make(chan os.Signal, 1)
+	// Notify the sigCh channel on SIGINT and SIGTERM signals
+	signal.Notify(sigCh, os.Interrupt, syscall.SIGTERM)
+
+	go func() {
+		// Blocks the code until a signal is received
+		sigReceived := <-sigCh
+
+		fmt.Printf("Received signal: %v\n", sigReceived)
+		logger.Error().
+			Str("signal channel", "interrupt recieved").
+			Msgf("signal channel received signal: %s", sigReceived)
+
+		interruptLogger.Info().
+			Msgf("%s", *listenerOne)
+
+		// exits the program
+		os.Exit(1)
+	}()
+
+	done := make(chan bool)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	// creates a wait group to ensure all neccessary data are stored before an attempt is made to log or store them
+	var wg sync.WaitGroup
+	wg.Add(3)
+
+	var eventResp Resp
+
+	// creates the first listener that receives a payload from the nats cli
+	sub1, err := cm.NC.Subscribe(listenerOneSubject, func(msg *nats.Msg) {
+		defer wg.Done()
+
+		listenerOneData := string(msg.Data)
+		listenerOne = &listenerOneData
+		logger.Info().
+			Str("listener", "listener one").
+			Msgf("listener 1 received %s", listenerOneData)
+
+		subscriber1 := SubscriberOne{
+			SubscriberName:   "listener one",
+			SubscriberResult: listenerOneData,
+		}
+		// converts received data to all caps
+		capitalizedData := subscriber1.ProcessMessage()
+
+		eventResp.addEventResponse("listener one", *listenerOne)
+
+		// publishes modified data for second listener to pick up
+		err := forwardMessage(cm.NC, listenerTwoSubject, "listener1", capitalizedData)
+		if err != nil {
+			logger.Error().
+				Str("publisher", "publisher two").
+				Msgf("%s", err)
+		}
+	})
+	if err != nil {
+		logger.Error().
+			Str("listener1", "subscription error").
+			Msgf("error: listener1 could not subscribe: %v", err)
+	}
+	defer sub1.Drain()
+
+	// Publishes data  from request body to listenerOneSubject.
+	err = cm.NC.Publish(listenerOneSubject, []byte(eventMessage))
+	if err != nil {
+		logger.Error().
+			Str("publisher err", "could not publish payload").
+			Msgf("%s", err)
+	}
+
+	// creates the second listener that receives a payload from the first listener
+	sub2, err := cm.NC.Subscribe(listenerTwoSubject, func(msg *nats.Msg) {
+		defer wg.Done()
+
+		listenerTwoData := string(msg.Data)
+		listenerTwo = &listenerTwoData
+		logger.Info().
+			Str("listener", "listener two").
+			Msgf("listener 2 received %s from listener 1", listenerTwoData)
+
+		subscriber2 := SubscriberTwo{
+			SubscriberName:   "listener two",
+			SubscriberResult: listenerTwoData,
+		}
+		// reverses received data
+		reversedData := subscriber2.ProcessMessage()
+
+		eventResp.addEventResponse("listener two", *listenerTwo)
+
+		// publishes modified data for third listener to pick up
+		err = forwardMessage(cm.NC, listenerThreeSubject, "listener2", reversedData)
+		if err != nil {
+			logger.Error().
+				Str("publisher", "publisher three").
+				Msgf("%s", err)
+		}
+	})
+	if err != nil {
+		logger.Error().
+			Str("listener2", "subscribtion error").
+			Msgf("error: listener2 could not subscribe: %v", err)
+	}
+	defer sub2.Drain()
+
+	// creates the third listener that receives a payload from the second listener
+	sub3, err := cm.NC.Subscribe(listenerThreeSubject, func(msg *nats.Msg) {
+		defer wg.Done()
+
+		listenerThreeData := string(msg.Data)
+		logger.Info().
+			Str("listener", "listener three").
+			Msgf("listener 3 received %s from listener 2", listenerThreeData)
+
+		subscriber3 := SubscriberThree{
+			SubscriberName:   "listener three",
+			SubscriberResult: listenerThreeData,
+		}
+
+		// converts received data to lower form
+		lowerDataStr := strings.ToLower(listenerThreeData)
+		lowerData := subscriber3.ProcessMessage()
+
+		logger.Info().
+			Str("listener", "listener three").
+			Msgf("listener 3 modified %s received from listener 2 into %s", listenerThreeData, lowerData)
+		listenerThree = &lowerDataStr
+
+		eventResp.addEventResponse("listener three", *listenerThree)
+
+		// *** the following lines are commented out - it triggers a negative waitgroup error plus it creates an infinite loop of multiple subscribers and publishers actions ***
+
+		// forwardMessage(nc, listenerOneSubject, "listener3", lowerData)
+		// forwardMessage(nc, listenerTwoSubject, "listener3", lowerData)
+	})
+	if err != nil {
+		logger.Error().
+			Str("listener3", "subscribtion error").
+			Msgf("error: listener3 could not subscribe: %v", err)
+	}
+	defer sub3.Drain()
+
+	// this goroutine checks for context timeout (guards against process running forever) and also watches for the done channel, an indication that all required processes are done runnning before exiting the program. runtime.GoExit allows all deferred function to get called before exiting
+	go func() {
+		for {
+			select {
+			case <-ctx.Done():
+				logger.Error().
+					Str("ctx", "ctx done").
+					Msg("operation cancelled: operation took too long")
+
+			case <-done:
+				logger.Info().
+					Msg("all pubsub processes done")
+				/* runtime.Goexit() is needed to gracefully exit this routine
+				without this Goexit, when all processes gets completed, a looping file
+				already closed zerolog error gets triggered on attempt of logging ctx.Done().
+				Hence, the need to close the routine when it's done and not wait for ctx.Done()
+				case to get triggered.
+				*/
+				runtime.Goexit()
+			}
+		}
+	}()
+
+	// blocks this part of the code until all subscribers have gotten their data, guards against runtime panic: nil dereference error
+	wg.Wait()
+
+	stmt, err := cm.DB.Prepare("INSERT INTO events (listener_one, listener_two, listener_three, event_time) VALUES ($1, $2, $3, $4)")
+	if err != nil {
+		logger.Error().
+			Str("db", "stmt preparation").
+			Msgf("error: could not prepare database tranasaction statement: %s", err)
+	}
+	defer stmt.Close()
+
+	_, err = stmt.Exec(eventResp[0].SubscriberResult, eventResp[1].SubscriberResult, eventResp[2].SubscriberResult, time.Now())
+	if err != nil {
+		logger.Error().
+			Str("db", "stmt execution").
+			Msgf("error: could not event record into database: %s", err)
+	}
+
+	logger.Info().
+		Str("response", "struct of data received + modifications").
+		Msgf("%v", eventResp)
+
+	// closed done channel indicates end of required processes
+	close(done)
 }
