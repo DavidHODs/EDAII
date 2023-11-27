@@ -42,13 +42,23 @@ func ReverseString(input string) string {
 	return reversed
 }
 
-// Logger creates||opens a log txt file and sets log outputs to be the created||opened file. returns *os.File or an error
-func Logger(logFile string) (*os.File, error) {
-	// creates a txt file for basic logging if it does not exist
-	file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
-	if err != nil {
-		return nil, fmt.Errorf("error: could not open log file: %s", err)
-	}
+// Logger creates||opens a log txt file and sets log outputs to be the created||opened file. returns *os.File or an error. truncate is set to true if the file content needs to be wiped off every time it's opened.
+func Logger(logFile string, truncate bool) (*os.File, error) {
+	if !truncate {
+		// creates a txt file for basic logging if it does not exist
+		file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
+		if err != nil {
+			return nil, fmt.Errorf("error: could not open log file: %s", err)
+		}
 
-	return file, nil
+		return file, nil
+	} else {
+		// creates a txt file for basic logging if it does not exist
+		file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, 0666)
+		if err != nil {
+			return nil, fmt.Errorf("error: could not open log file: %s", err)
+		}
+
+		return file, nil
+	}
 }
