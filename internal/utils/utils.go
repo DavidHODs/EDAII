@@ -1,6 +1,7 @@
 package internal
 
 import (
+	"encoding/json"
 	"fmt"
 	"os"
 
@@ -43,9 +44,8 @@ func ReverseString(input string) string {
 	return reversed
 }
 
-// Logger creates||opens a log txt file and sets log outputs to be the created||opened file. returns *os.File or an error
+// Logger creates||opens a log txt file and sets log outputs to be the created||opened file. returns *os.File or an error.
 func Logger(logFile string) (*os.File, error) {
-	// creates a txt file for basic logging if it does not exist
 	file, err := os.OpenFile(logFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0666)
 	if err != nil {
 		return nil, fmt.Errorf("error: could not open log file: %s", err)
@@ -66,4 +66,27 @@ func IsFileEmpty(filename string) (bool, error) {
 	}
 
 	return false, nil
+}
+
+// LogContent returns the value of a json key pair in a specified log file
+func LogContent(filename, logKey string) (string, error) {
+	// reads the content of the log file
+	logContent, err := os.ReadFile(filename)
+	if err != nil {
+		return "", nil
+	}
+
+	// decodes the JSON content
+	var logMap map[string]interface{}
+	err = json.Unmarshal(logContent, &logMap)
+	if err != nil {
+		return "", err
+	}
+
+	keyValue, ok := logMap[logKey].(string)
+	if !ok {
+		return "", fmt.Errorf("key is not of type string")
+	}
+
+	return keyValue, nil
 }

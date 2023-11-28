@@ -1,7 +1,6 @@
 package main
 
 import (
-	"fmt"
 	"log"
 
 	db "github.com/DavidHODs/EDAII/internal/database"
@@ -58,8 +57,17 @@ func main() {
 	}
 
 	if !isInterruptLogEmpty {
-		fmt.Println("file not empty")
-		cm.NatsRecovery("trial")
+		eventMessage, err := utils.LogContent(interruptsLog, "message")
+		if err != nil {
+			log.Fatalf("could not retrieve content of interrupt logs: %v", err)
+		}
+		cm.NatsRecovery(eventMessage)
+
+		// clears content of interrupt log file
+		err = interruptLogLogF.Truncate(0)
+		if err != nil {
+			log.Fatalf("error truncating file: %s", err)
+		}
 	}
 
 	app := fiber.New()

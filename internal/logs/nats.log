@@ -1,10 +1,7 @@
-{"level":"error","signal channel":"interrupt recieved","time":"282812-1111-288T00:1112:308+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:146","message":"signal channel received signal: interrupt"}
-{"level":"info","listener":"listener one","time":"282812-1111-288T00:1114:1228+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:406","message":"listener 1 received trial"}
-{"level":"info","listener":"listener two","time":"282812-1111-288T00:1114:1228+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:448","message":"listener 2 received TRIAL from listener 1"}
-{"level":"info","listener":"listener three","time":"282812-1111-288T00:1114:1228+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:481","message":"listener 3 received LAIRT from listener 2"}
-{"level":"info","listener":"listener three","time":"282812-1111-288T00:1114:1228+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:494","message":"listener 3 modified LAIRT received from listener 2 into lairt"}
-{"level":"info","response":"struct of data received + modifications","time":"282812-1111-288T00:1114:1228+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:554","message":"[{listener one trial} {listener two TRIAL} {listener three lairt}]"}
-{"level":"info","time":"282812-1111-288T00:1114:1228+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:522","message":"all pubsub processes done"}
-{"level":"info","listener":"listener one","time":"282812-1111-288T00:1114:1214+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:192","message":"listener 1 received final testssssssssssss"}
-{"level":"info","listener":"listener two","time":"282812-1111-288T00:1114:1214+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:233","message":"listener 2 received FINAL TESTSSSSSSSSSSSS from listener 1"}
-{"level":"error","signal channel":"interrupt recieved","time":"282812-1111-288T00:1114:1214+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:146","message":"signal channel received signal: interrupt"}
+{"level":"info","listener":"listener one","time":"28281-1111-288T11:116:111+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:415","message":"listener 1 received hello"}
+{"level":"info","listener":"listener two","time":"28281-1111-288T11:116:111+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:457","message":"listener 2 received HELLO from listener 1"}
+{"level":"info","listener":"listener three","time":"28281-1111-288T11:116:111+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:490","message":"listener 3 received OLLEH from listener 2"}
+{"level":"info","listener":"listener three","time":"28281-1111-288T11:116:111+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:503","message":"listener 3 modified OLLEH received from listener 2 into olleh"}
+{"level":"info","response":"struct of data received + modifications","time":"28281-1111-288T11:116:111+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:568","message":"[{listener one hello} {listener two HELLO} {listener three olleh}]"}
+{"level":"info","time":"28281-1111-288T11:116:111+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:531","message":"all pubsub processes done"}
+{"level":"error","signal channel":"interrupt recieved","time":"28281-1111-288T11:116:111+11:00","caller":"/home/david/Desktop/EDAII/pkg/natsMessage.go:385","message":"signal channel received signal: interrupt"}

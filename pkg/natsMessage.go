@@ -145,8 +145,10 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 			Str("signal channel", "interrupt recieved").
 			Msgf("signal channel received signal: %s", sigReceived)
 
-		interruptLogger.Info().
-			Msgf("%s", *listenerOne)
+		if listenerOne != nil {
+			interruptLogger.Info().
+				Msgf("%s", *listenerOne)
+		}
 
 		// exits the program
 		os.Exit(1)
@@ -241,8 +243,6 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 
 		eventResp.addEventResponse("listener two", *listenerTwo)
 
-		time.Sleep(10 * time.Second)
-
 		// publishes modified data for third listener to pick up
 		err = forwardMessage(cm.NC, listenerThreeSubject, "listener2", reversedData)
 		if err != nil {
@@ -310,6 +310,11 @@ func (cm *ConnectionManager) NatsOps(c *fiber.Ctx) error {
 			case <-done:
 				logger.Info().
 					Msg("all pubsub processes done")
+
+				// clears of the values of the listeners
+				listenerOne = nil
+				listenerTwo = nil
+				listenerThree = nil
 				/* runtime.Goexit() is needed to gracefully exit this routine
 				without this Goexit, when all processes gets completed, a looping file
 				already closed zerolog error gets triggered on attempt of logging ctx.Done().
@@ -377,8 +382,10 @@ func (cm *ConnectionManager) NatsRecovery(eventMessage string) {
 			Str("signal channel", "interrupt recieved").
 			Msgf("signal channel received signal: %s", sigReceived)
 
-		interruptLogger.Info().
-			Msgf("%s", *listenerOne)
+		if listenerOne != nil {
+			interruptLogger.Info().
+				Msgf("%s", *listenerOne)
+		}
 
 		// exits the program
 		os.Exit(1)
@@ -520,6 +527,11 @@ func (cm *ConnectionManager) NatsRecovery(eventMessage string) {
 			case <-done:
 				logger.Info().
 					Msg("all pubsub processes done")
+
+				// clears of the values of the listeners
+				listenerOne = nil
+				listenerTwo = nil
+				listenerThree = nil
 				/* runtime.Goexit() is needed to gracefully exit this routine
 				without this Goexit, when all processes gets completed, a looping file
 				already closed zerolog error gets triggered on attempt of logging ctx.Done().
